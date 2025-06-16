@@ -1,7 +1,11 @@
-use std::{env, fs::File, io::{Read, Write}};
+use nucleotide_encoder::NucBlockVec;
 use std::io::BufReader;
 use std::time::Instant;
-use rust_dna_compression::{ NucBlockVec };
+use std::{
+    env,
+    fs::File,
+    io::{Read, Write},
+};
 
 fn main() -> std::io::Result<()> {
     // Read CLI args
@@ -23,7 +27,6 @@ fn main() -> std::io::Result<()> {
 
     Ok(())
 }
-
 
 fn decode_flow(input_path: &str, compliment: bool) -> std::io::Result<()> {
     println!("Decoding {}", input_path);
