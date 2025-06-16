@@ -1,1 +1,4 @@
 /target
+*.csv
+*.txt
+*.txt.gz
