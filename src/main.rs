@@ -1,3 +1,4 @@
+use nucleotide_encoder::baseword::BaseMaskVec;
 use nucleotide_encoder::NucBlockVec;
 use std::io::BufReader;
 use std::time::Instant;
@@ -33,13 +34,13 @@ fn decode_flow(input_path: &str, compliment: bool) -> std::io::Result<()> {
     let mut compressed_data = Vec::new();
     BufReader::new(File::open(input_path)?).read_to_end(&mut compressed_data)?;
 
-    let mut dnablocks = NucBlockVec::from_bytes(&compressed_data);
+    let mut vector = NucBlockVec::from_bytes(&compressed_data);
 
     if compliment {
-        dnablocks.complement_sequence();
+        // vector.compliment_sequence_simd();
     }
 
-    let decoded_dna = dnablocks.to_string();
+    let decoded_dna = vector.to_string();
     File::create("decoded.txt")?.write_all(decoded_dna.as_bytes())?;
     println!("Decoded DNA written to decoded.txt");
 
@@ -51,39 +52,72 @@ fn encode_flow(input_path: &str, compliment: bool, benchmark: bool) -> std::io::
     let mut dna = String::new();
     BufReader::new(File::open(input_path)?).read_to_string(&mut dna)?;
 
-    let mut dnablocks = NucBlockVec::from_str(dna);
-
     if benchmark {
-        run_benchmark(&mut dnablocks)?;
+        run_benchmark_from_str(&mut dna)?;
+    }
+    let mut vector = match BaseMaskVec::try_from(dna) {
+        Ok(v) => v,
+        Err(_) => panic!("test"),
+    };
+    // println!("{}", vector);
+    if benchmark {
+        run_benchmark_compliment(&mut vector)?;
     }
 
     if compliment {
-        dnablocks.complement_sequence();
+        // vector.complement_sequence();
     }
 
-    let compressed = dnablocks.to_bytes();
-    File::create("output.txt")?.write_all(&compressed)?;
-    println!("Compressed DNA written to output.txt");
+    // let compressed = vector.into();
+    // File::create("output_2.txt")?.write_all(&compressed)?;
+    // println!("Compressed DNA written to output_2.txt");
 
     Ok(())
 }
 
-fn run_benchmark(blocks: &mut NucBlockVec) -> std::io::Result<()> {
-    let mut file = File::create("speed_test.csv")?;
+fn run_benchmark_from_str(dna: &mut String ) -> std::io::Result<()> {
+    let mut file = File::create("speed_encode_test.csv")?;
     writeln!(file, "method,iteration,time_ms")?;
-
-    for i in 0..100 {
-        let start_fast = Instant::now();
-        blocks.complement_sequence();
-        let elapsed_fast = start_fast.elapsed().as_millis();
-        writeln!(file, "bit_shift,{i},{elapsed_fast}")?;
-
-        let start_match = Instant::now();
-        blocks.complement_sequence_match();
-        let elapsed_match = start_match.elapsed().as_millis();
-        writeln!(file, "match_table,{i},{elapsed_match}")?;
+    for i in 0..1000 {
+        let start = Instant::now();
+        NucBlockVec::from_str(dna.to_string());
+        let elapsed = start.elapsed().as_nanos();
+        writeln!(file, "from_str,{i},{elapsed}")?;
+    }
+    for i in 0..1000 {
+        let start = Instant::now();
+        NucBlockVec::from_str_simd(dna.to_string());
+        let elapsed = start.elapsed().as_nanos();
+        writeln!(file, "from_str,{i},{elapsed}")?;
     }
 
-    println!("Benchmark written to speed_test.csv");
+    println!("Benchmark written to speed_encode_test.csv");
+    Ok(())
+}
+
+fn run_benchmark_compliment(vector: &mut BaseMaskVec) -> std::io::Result<()> {
+    let mut file = File::create("speed_compliment_test_2.csv")?;
+    writeln!(file, "method,iteration,time_ms")?;
+
+    for i in 0..1000 {
+        let start_fast = Instant::now();
+        vector.complement_match();
+        let elapsed_fast = start_fast.elapsed().as_nanos();
+        writeln!(file, "match,{i},{elapsed_fast}")?;
+    }
+    for i in 0..1000 {
+        let start_match = Instant::now();
+        vector.complement_rotate();
+        let elapsed_match = start_match.elapsed().as_nanos();
+        writeln!(file, "rotate,{i},{elapsed_match}")?;
+    }
+    for i in 0..1000 {
+        let start_match = Instant::now();
+        vector.complement_lookup();
+        let elapsed_match = start_match.elapsed().as_nanos();
+        writeln!(file, "lookup,{i},{elapsed_match}")?;
+    }
+
+    println!("Benchmark written to speed_compliment_test_2.csv");
     Ok(())
 }

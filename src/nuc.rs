@@ -1,3 +1,4 @@
+use std::{collections::HashMap};
 
 #[derive(Debug)]
 ///Representation of a nucleotide pair.
@@ -78,26 +79,26 @@ impl NucWord {
         let bin = (self.0 & mask) >> shift;
 
         let comp: u16 = match bin {
-            0b0000 => 0b0000, // '_' → '_'
-            0b0001 => 0b0100, // A → T
-            0b0010 => 0b1000, // C → G
-            0b0100 => 0b0001, // T → A
-            0b1000 => 0b0010, // G → C
+            0b0000 => 0b0000,
+            0b0001 => 0b0100,
+            0b0010 => 0b1000,
+            0b0100 => 0b0001,
+            0b1000 => 0b0010,
 
-            0b0011 => 0b1100, // R (A or G) → Y (T or C)
-            0b0110 => 0b1001, // K (G or T) → M (A or C)
-            0b1100 => 0b0011, // Y (C or T) → R (G or A)
-            0b1001 => 0b0110, // M (A or C) → K (T or G)
+            0b0011 => 0b1100,
+            0b0110 => 0b1001,
+            0b1100 => 0b0011,
+            0b1001 => 0b0110,
 
-            0b0101 => 0b1010, // S (G or C) → W (A or T)
-            0b1010 => 0b0101, // W (A or T) → S (C or G)
+            0b0101 => 0b1010,
+            0b1010 => 0b0101,
 
-            0b1110 => 0b1011, // B (not A: C/G/T) → H (not G: A/C/T)
-            0b1101 => 0b1101, // D (not C: A/G/T) → D (not C)
-            0b1011 => 0b1110, // H (not G: A/C/T) → B (not A)
-            0b0111 => 0b0111, // V (not T: A/C/G) → V (not T)
+            0b1110 => 0b1011,
+            0b1101 => 0b1101,
+            0b1011 => 0b1110,
+            0b0111 => 0b0111,
 
-            0b1111 => 0b1111, // N → N
+            0b1111 => 0b1111,
             _ => panic!("Invalid nucleotide bits: {:04b}", bin),
         };
         self.0 = (self.0 & !mask) | (comp << shift);
@@ -107,6 +108,23 @@ impl NucWord {
             self.compliment(i);
         }
     }
+    /// Uses SIMD Vector to perform 2 bit rotations on each element in the `NucWord`.
+    ///
+    ///
+    /// # Arguments
+    ///
+    /// - `&mut self` (`NucWord`) - `NucWord`
+    ///
+    // pub fn compliment_each_simd(&mut self) {
+    //     let bases = [
+    //         self.0 & 0b1111,
+    //         (self.0 >> 4) & 0b1111,
+    //         (self.0 >> 8) & 0b1111,
+    //         (self.0 >> 12) & 0b1111,
+    //     ];
+    //     let simd_chunk = u16x4::from_array(bases);
+    //     let _ = ((simd_chunk << 2) | (simd_chunk >> 2)) & u16x4::splat(0b1111);
+    // }
     pub fn compliment_each_match(&mut self) {
         for i in 0..4 {
             self.compliment_match(i);
