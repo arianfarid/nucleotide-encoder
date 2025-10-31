@@ -1,4 +1,4 @@
-
+use std::simd::prelude::u16x4;
 use crate::nuc::NucWord;
 
 #[derive(Debug)]
@@ -7,6 +7,23 @@ impl NucBlockVec {
     pub fn from_str(nucleotides: String) -> Self {
         let mut out = NucBlockVec(vec![]);
         for i in 0..(nucleotides.len() / 4 as usize) {
+            let low = i * 4;
+            let high = (i * 4) + 4;
+            let str = &nucleotides[low..high];
+            out.0.push(NucWord::from_str(&str));
+        }
+        if nucleotides.len() % 4 != 0 {
+            let low = nucleotides.len() - (nucleotides.len() % 4) as usize;
+            let str = &nucleotides[low..nucleotides.len() as usize];
+            out.0.push(NucWord::from_str(&str));
+        }
+        out
+    }
+    pub fn from_str_simd(nucleotides: String) -> Self {
+
+        let mut out = NucBlockVec(vec![]);
+        for i in 0..(nucleotides.len() / 4 as usize) {
+
             let low = i * 4;
             let high = (i * 4) + 4;
             let str = &nucleotides[low..high];
@@ -52,6 +69,11 @@ impl NucBlockVec {
             nuc_word.compliment_each();
         }
     }
+    // pub fn compliment_sequence_simd(&mut self) {
+    //     for nuc_word in self.0.iter_mut() {
+    //         nuc_word.compliment_each_simd();
+    //     }
+    // }
     pub fn complement_sequence_match(&mut self) {
         for nuc_word in self.0.iter_mut() {
             nuc_word.compliment_each_match();
